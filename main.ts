@@ -1,5 +1,7 @@
 import { assert } from "console";
 
+type integer = number | bigint;
+
 class ELFInfo {
     bit: "32" | "64";
     endianness: "little" | "big";
@@ -16,7 +18,8 @@ class ELFInfo {
         this.endianness = this.fileHeader.endianness
         this.progHeader = new ELFProgramHeader(this.binary, this.bit, this.endianness, 
             this.fileHeader.e_phnum, this.fileHeader.e_phoff);
-        this.sectionHeader = new ELFSectionHeader();
+        this.sectionHeader = new ELFSectionHeader(this.binary, this.bit,
+            this.endianness, this.fileHeader.e_shnum, this.fileHeader.e_shoff);
     }
 };
 
@@ -31,10 +34,10 @@ class ELFHeader {
         this.endianness = "little";
     }
 
-    readUIntVariousSize(offset: number, size: 1 | 2 | 4 | 8): number | bigint {
+    readUIntVariousSize(offset: number, size: number): integer {
         let buf = this.binary;
         let endianness = this.endianness;
-        let res: number | bigint = 0;
+        let res: integer = 0;
         if (endianness === "big") {
             switch (size) {
                 case 1:
@@ -49,6 +52,8 @@ class ELFHeader {
                 case 8:
                     res = buf.readBigUInt64BE(offset);
                     break;
+                default:
+                    throw RangeError(`Illegal unsigned integer size: ${size}`)
             }
         } else {
             switch (size) {
@@ -64,6 +69,8 @@ class ELFHeader {
                 case 8:
                     res = buf.readBigUInt64LE(offset);
                     break;
+                default:
+                    throw RangeError(`Illegal unsigned integer size: ${size}`)
             }
         }
         return res;
@@ -190,21 +197,47 @@ class ELFFileHeader extends ELFHeader {
     }
 };
 
+/**
+ * Type field size info
+ */
+type FieldSizeMapping<T> = {
+    field: keyof T;
+    size: number;
+}
+
+/**
+ * Field <-> size mapping for fields in type T
+ */
+type ObjectFieldSizeMap<T extends object> = FieldSizeMapping<T>[];
+
 type phTableEntry = {
-    p_type: number;
-    p_flags: number;
-    p_offset: number | bigint;
-    p_vaddr: number | bigint;
-    p_paddr: number | bigint;
-    p_filesz: number | bigint;
-    p_memsz: number | bigint;
-    p_align: number | bigint;
+    p_type: integer;
+    p_flags: integer;
+    p_offset: integer;
+    p_vaddr: integer;
+    p_paddr: integer;
+    p_filesz: integer;
+    p_memsz: integer;
+    p_align: integer;
+}
+
+type SectionHeaderTableEntry = {
+    sh_name: integer;
+    sh_type: integer;
+    sh_flags: integer;
+    sh_addr: integer;
+    sh_offset: integer;
+    sh_size: integer;
+    sh_link: integer;
+    sh_info: integer;
+    sh_addralign: integer;
+    sh_entsize: integer;
 }
 
 class ELFProgramHeader extends ELFHeader {
     phTable: Array<phTableEntry>;
     phEntries: number;
-    phoff: number | bigint;
+    phoff: integer;
     readonly phEntry_size_32 = 0x20;
     readonly phEntry_size_64 = 0x38;
     readonly p_type_size = 0x4;
@@ -301,7 +334,85 @@ class ELFProgramHeader extends ELFHeader {
     }
 };
 
-class ELFSectionHeader {
+class ELFSectionHeader extends ELFHeader {
+    shTable: Array<SectionHeaderTableEntry>;
+    shEntries: number;
+    shoff: number | bigint;
+    readonly ShEntrySizeMapping32: ObjectFieldSizeMap<SectionHeaderTableEntry> = [
+        { field: "sh_name", size: 0x4 },
+        { field: "sh_type", size: 0x4 },
+        { field: "sh_flags", size: 0x4 },
+        { field: "sh_addr", size: 0x4 },
+        { field: "sh_offset", size: 0x4 },
+        { field: "sh_size", size: 0x4 },
+        { field: "sh_link", size: 0x4 },
+        { field: "sh_info", size: 0x4 },
+        { field: "sh_addralign", size: 0x4 },
+        { field: "sh_entsize", size: 0x4 },
+    ];
+    readonly ShEntrySizeMapping64: ObjectFieldSizeMap<SectionHeaderTableEntry> = [
+        { field: "sh_name", size: 0x4 },
+        { field: "sh_type", size: 0x4 },
+        { field: "sh_flags", size: 0x8 },
+        { field: "sh_addr", size: 0x8 },
+        { field: "sh_offset", size: 0x8 },
+        { field: "sh_size", size: 0x8 },
+        { field: "sh_link", size: 0x4 },
+        { field: "sh_info", size: 0x4 },
+        { field: "sh_addralign", size: 0x8 },
+        { field: "sh_entsize", size: 0x8 },
+    ];
+
+    readonly shEntry_size_32 = 0x28;
+    readonly shEntry_size_64 = 0x40;
+
+    constructor(binary: Buffer, bit: "32" | "64", endianess: "big" | "little",
+        shEntries: number, shoff: integer) {
+        super(binary);
+        this.bit = bit;
+        this.endianness = endianess;
+        this.shEntries = shEntries;
+        this.shoff = shoff;
+        this.shTable = Array<SectionHeaderTableEntry>(this.shEntries);
+
+        // Fill up table entry from offset
+        let offset = this.shoff;
+        for (let i = 0; i < this.shEntries; i++) {
+            [this.shTable[i], offset] = this.readEntry(Number(offset));
+        }
+    }
+
+    readEntry(start_offset: number): [SectionHeaderTableEntry, number] {
+        let offset = start_offset;
+        let entry: SectionHeaderTableEntry = {
+            sh_name: 0x0,
+            sh_type: 0x0,
+            sh_flags: 0x0,
+            sh_addr: 0x0,
+            sh_offset: 0x0,
+            sh_size: 0x0,
+            sh_link: 0x0,
+            sh_info: 0x0,
+            sh_addralign: 0x0,
+            sh_entsize: 0x0,
+        };
+
+        let mapping = this.bit === "32" ? this.ShEntrySizeMapping32 : this.ShEntrySizeMapping64;
+        mapping.forEach((mapping) => {
+            let field = mapping.field;
+            let size = mapping.size;
+            entry[field] = this.readUIntVariousSize(offset, size);
+            offset += size;
+        });
+
+        let diff = offset - start_offset;
+        if (this.bit === "32")
+            assert(diff === this.shEntry_size_32, `Entry size mismatched! Expect ${this.shEntry_size_32} but got ${diff}`);
+        else
+            assert(diff === this.shEntry_size_64, `Entry size mismatched! Expect ${this.shEntry_size_64} but got ${diff}`);
+
+        return [entry, offset];
+    }
 };
 
 module.exports = {
