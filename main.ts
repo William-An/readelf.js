@@ -9,18 +9,23 @@ class ELFInfo {
 
     constructor(binary: Buffer) {
         this.binary = binary;
-        this.bit = "32";
-        this.endianness = "little";
-        this.fileHeader = new ELFFileHeader(this);
+        this.fileHeader = new ELFFileHeader(this.binary);
+        this.bit = this.fileHeader.bit;
+        this.endianness = this.fileHeader.endianness
         this.progHeader = new ELFProgramHeader();
         this.sectionHeader = new ELFSectionHeader();
     }
 };
 
 class ELFHeader {
-    parent: ELFInfo;
-    constructor(parent: ELFInfo) {
-        this.parent = parent;
+    binary: Buffer;
+    bit: "32" | "64";
+    endianness: "big" | "little";
+
+    constructor(binary: Buffer) {
+        this.binary = binary;
+        this.bit = "32";
+        this.endianness = "little";
     }
 }
 
@@ -83,33 +88,29 @@ class ELFFileHeader extends ELFHeader {
     e_shnum: number;
     e_shstrndx: number;
 
-    constructor(parent: ELFInfo) {
-        super(parent);
+    constructor(binary: Buffer) {
+        super(binary);
 
         // Construct all fields inside constructor
-        let elfbinary = parent.binary;
+        this.binary = binary;
         let offset = 0;
-        this.e_ident = elfbinary.subarray(offset, this.e_ident_size);
+        this.e_ident = this.binary.subarray(offset, this.e_ident_size);
 
         // Get bit and endianness info
-        let bit: "32" | "64";
-        let endianness: "big" | "little";
         let bit_raw = this.e_ident[EI_INDEX.EI_CLASS];
         let endianness_raw = this.e_ident[EI_INDEX.EI_DATA];
         if (bit_raw === 1)
-            bit = "32";
+            this.bit = "32";
         else if (bit_raw === 2)
-            bit = "64";
+            this.bit = "64";
         else
             throw Error(`Invalid bit info byte: ${bit_raw}`);
         if (endianness_raw === 1)
-            endianness = "little";
+            this.endianness = "little";
         else if (endianness_raw === 2)
-            endianness = "big";
+            this.endianness = "big";
         else
             throw Error(`Invalid endianness info byte: ${endianness_raw}`);
-        this.parent.bit = bit;
-        this.parent.endianness = endianness;
 
         // Parse rest of the elf header
         offset += this.e_ident_size;
@@ -119,13 +120,13 @@ class ELFFileHeader extends ELFHeader {
         offset += this.e_machine_size;
         this.e_version = this.readUIntVariousSize(offset, this.e_version_size) as number;
         offset += this.e_version_size;
-        let e_entry_size: 4 | 8 = bit == "32" ? this.e_entry_size_32 : this.e_entry_size_64;
+        let e_entry_size: 4 | 8 = this.bit == "32" ? this.e_entry_size_32 : this.e_entry_size_64;
         this.e_entry = this.readUIntVariousSize(offset, e_entry_size);
         offset += e_entry_size
-        let e_phoff_size: 4 | 8 = bit == "32" ? this.e_phoff_size_32 : this.e_phoff_size_64;
+        let e_phoff_size: 4 | 8 = this.bit == "32" ? this.e_phoff_size_32 : this.e_phoff_size_64;
         this.e_phoff = this.readUIntVariousSize(offset, e_phoff_size);
         offset += e_phoff_size
-        let e_shoff_size: 4 | 8 = bit == "32" ? this.e_shoff_size_32 : this.e_shoff_size_64;
+        let e_shoff_size: 4 | 8 = this.bit == "32" ? this.e_shoff_size_32 : this.e_shoff_size_64;
         this.e_shoff = this.readUIntVariousSize(offset, e_shoff_size);
         offset += e_shoff_size
         this.e_flags = this.readUIntVariousSize(offset, this.e_flags_size) as number;
@@ -149,8 +150,8 @@ class ELFFileHeader extends ELFHeader {
     }
 
     readUIntVariousSize(offset: number, size: 1 | 2 | 4 | 8): number | bigint {
-        let buf = this.parent.binary;
-        let endianness = this.parent.endianness;
+        let buf = this.binary;
+        let endianness = this.endianness;
         let res: number | bigint = 0;
         if (endianness == "big") {
             switch (size) {
