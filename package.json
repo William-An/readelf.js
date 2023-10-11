@@ -2,7 +2,7 @@
   "name": "readelf.js",
   "version": "1.0.0",
   "description": "Javascript ELF file reader",
-  "main": "main.js",
+  "main": "build/readelf.js",
   "scripts": {
     "test": "npx ts-node ./test/test.ts"
   },
