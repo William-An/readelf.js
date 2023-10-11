@@ -2,12 +2,19 @@
   "name": "readelf.js",
   "version": "1.0.0",
   "description": "Javascript ELF file reader",
-  "main": "build/readelf.js",
+  "main": "dist/readelf.js",
+  "types": "dist/readelf.d.ts",
   "scripts": {
+    "build": "tsc",
+    "pretest": "make -C ./test",
     "test": "npx ts-node ./test/test.ts"
   },
   "author": "William-AN",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/William-An/readelf.js"
+  },
   "devDependencies": {
     "@types/node": "^20.8.4",
     "ts-node": "^10.9.1"
