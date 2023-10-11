@@ -4,7 +4,7 @@ class ELFInfo {
     fileHeader: ELFFileHeader;
     progHeader: ELFProgramHeader;
     sectionHeader: ELFSectionHeader;
-    binary: Buffer;
+    readonly binary: Buffer;
 
 
     constructor(binary: Buffer) {
@@ -18,7 +18,7 @@ class ELFInfo {
 };
 
 class ELFHeader {
-    binary: Buffer;
+    readonly binary: Buffer;
     bit: "32" | "64";
     endianness: "big" | "little";
 
@@ -32,7 +32,7 @@ class ELFHeader {
 /**
  * Index enum for elf file header
  */
-enum EI_INDEX {
+export enum EI_INDEX {
     EI_MAG0 = 0,
     EI_MAG1,
     EI_MAG2,
@@ -66,12 +66,12 @@ class ELFFileHeader extends ELFHeader {
     readonly e_shoff_size_64 = 0x8;
     // end different sizes for 64/32-bit
     readonly e_flags_size = 0x4;
-    readonly e_ehsize_size = 0x4;
-    readonly e_phentsize_size = 0x4;
-    readonly e_phnum_size = 0x4;
-    readonly e_shentsize_size = 0x4;
-    readonly e_shnum_size = 0x4;
-    readonly e_shstrndx_size = 0x4;
+    readonly e_ehsize_size = 0x2;
+    readonly e_phentsize_size = 0x2;
+    readonly e_phnum_size = 0x2;
+    readonly e_shentsize_size = 0x2;
+    readonly e_shnum_size = 0x2;
+    readonly e_shstrndx_size = 0x2;
 
     e_ident: Buffer;
     e_type: number;
@@ -92,7 +92,6 @@ class ELFFileHeader extends ELFHeader {
         super(binary);
 
         // Construct all fields inside constructor
-        this.binary = binary;
         let offset = 0;
         this.e_ident = this.binary.subarray(offset, this.e_ident_size);
 
@@ -146,7 +145,7 @@ class ELFFileHeader extends ELFHeader {
 
         // Check if size info matches
         if (offset !== this.e_ehsize)
-            throw Error(`Header size mismatched with waht is in the header! Header has ${this.e_ehsize} but actually is ${offset}!`);
+            throw Error(`Header size mismatched with what is in the header! Header has ${this.e_ehsize} but actually is ${offset}!`);
     }
 
     readUIntVariousSize(offset: number, size: 1 | 2 | 4 | 8): number | bigint {
@@ -193,3 +192,8 @@ class ELFProgramHeader {
 
 class ELFSectionHeader {
 };
+
+module.exports = {
+    ELFInfo,
+    EI_INDEX
+}
