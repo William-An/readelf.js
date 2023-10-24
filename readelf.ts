@@ -92,6 +92,12 @@ abstract class ELFHeader {
         this.endianness = "little";
     }
 
+    /**
+     * Read unsigned integer of variable width
+     * @param offset Buffer offset
+     * @param size Unsigned integer size
+     * @returns parsed integer
+     */
     readUIntVariousSize(offset: number, size: number): integer {
         let buf = this.binary;
         let endianness = this.endianness;
