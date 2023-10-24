@@ -6,8 +6,8 @@
   "types": "dist/readelf.d.ts",
   "scripts": {
     "build": "tsc",
-    "pretest": "make -C ./test",
-    "test": "npx ts-node ./test/test.ts"
+    "pretest": "sh ./scripts/pretest.sh",
+    "test": "sh ./scripts/test.sh"
   },
   "author": "William-AN",
   "license": "MIT",

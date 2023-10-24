@@ -73,9 +73,15 @@ class ELFInfo {
         this.sectionHeader = new ELFSectionHeader(this.binary, this.bit,
             this.endianness, this.fileHeader.e_shnum, this.fileHeader.e_shoff);
     }
+
+    printHex():void {
+        this.fileHeader.printHex();
+        this.progHeader.printHex();
+        this.sectionHeader.printHex();
+    }
 };
 
-class ELFHeader {
+abstract class ELFHeader {
     readonly binary: Buffer;
     bit: "32" | "64";
     endianness: "big" | "little";
@@ -127,6 +133,12 @@ class ELFHeader {
         }
         return res;
     }
+
+    /**
+     * This method print the class field in hex to be
+     * compared with reference C implementation
+     */
+    abstract printHex(): void;
 }
 
 class ELFFileHeader extends ELFHeader {
@@ -224,6 +236,25 @@ class ELFFileHeader extends ELFHeader {
         if (offset !== this.e_ehsize)
             throw Error(`Header size mismatched with what is in the header! Header has ${this.e_ehsize} but actually is ${offset}!`);
     }
+
+    printHex(): void {
+        for (let i = 0; i < this.e_ident_size; i++) {
+            console.log(`e_ident[${i}] = ${this.e_ident[i].toString(16)}`);
+        }
+        console.log(`e_type = ${this.e_type.toString(16)}`);
+        console.log(`e_machine = ${this.e_machine.toString(16)}`);
+        console.log(`e_version = ${this.e_version.toString(16)}`);
+        console.log(`e_entry = ${this.e_entry.toString(16)}`);
+        console.log(`e_phoff = ${this.e_phoff.toString(16)}`);
+        console.log(`e_shoff = ${this.e_shoff.toString(16)}`);
+        console.log(`e_flags = ${this.e_flags.toString(16)}`);
+        console.log(`e_ehsize = ${this.e_ehsize.toString(16)}`);
+        console.log(`e_phentsize = ${this.e_phentsize.toString(16)}`);
+        console.log(`e_phnum = ${this.e_phnum.toString(16)}`);
+        console.log(`e_shentsize = ${this.e_shentsize.toString(16)}`);
+        console.log(`e_shnum = ${this.e_shnum.toString(16)}`);
+        console.log(`e_shstrndx = ${this.e_shstrndx.toString(16)}`);
+    }
 };
 
 /**
@@ -308,6 +339,21 @@ class ELFProgramHeader extends ELFHeader {
 
         return [entry, offset];
     }
+
+    printHex(): void {
+        for(let entry of this.phTable) {
+            let line = "";
+            line += `p_type = ${entry.p_type.toString(16)} `;
+            line += `p_offset = ${entry.p_offset.toString(16)} `;
+            line += `p_vaddr = ${entry.p_vaddr.toString(16)} `;
+            line += `p_paddr = ${entry.p_paddr.toString(16)} `;
+            line += `p_filesz = ${entry.p_filesz.toString(16)} `;
+            line += `p_memsz = ${entry.p_memsz.toString(16)} `;
+            line += `p_flags = ${entry.p_flags.toString(16)} `;
+            line += `p_align = ${entry.p_align.toString(16)}`;
+            console.log(line);
+        }
+    }
 };
 
 class ELFSectionHeader extends ELFHeader {
@@ -387,6 +433,22 @@ class ELFSectionHeader extends ELFHeader {
             assert(diff === this.shEntry_size_64, `Entry size mismatched! Expect ${this.shEntry_size_64} but got ${diff}`);
 
         return [entry, offset];
+    }
+    printHex(): void {
+        for(let entry of this.shTable) {
+            let line = "";
+            line += `sh_name = ${entry.sh_name.toString(16)} `;
+            line += `sh_type = ${entry.sh_type.toString(16)} `;
+            line += `sh_flags = ${entry.sh_flags.toString(16)} `;
+            line += `sh_addr = ${entry.sh_addr.toString(16)} `;
+            line += `sh_offset = ${entry.sh_offset.toString(16)} `;
+            line += `sh_size = ${entry.sh_size.toString(16)} `;
+            line += `sh_link = ${entry.sh_link.toString(16)} `;
+            line += `sh_info = ${entry.sh_info.toString(16)} `;
+            line += `sh_addralign = ${entry.sh_addralign.toString(16)} `;
+            line += `sh_entsize = ${entry.sh_entsize.toString(16)}`;
+            console.log(line);
+        }
     }
 };
 
