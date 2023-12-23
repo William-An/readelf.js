@@ -14,7 +14,7 @@ npm install readelf.js
 This package accepts an elf file stored in `Buffer` and parse the file header, program header, and section header according to the ELF specification. An example usage:
 
 ```javascript
-const {ELFInfo} = require("readelf.ts");
+const {ELFInfo} = require("readelf.js");
 const fs = require("fs");
 
 // elf Buffer
