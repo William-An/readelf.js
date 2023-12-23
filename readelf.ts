@@ -7,7 +7,7 @@ type integer = number | bigint;
  */
 type ObjectFieldSizeMap<T extends object> = FieldSizeMapping<T>[];
 
-type ProgramHeaderTableEntry = {
+export type ProgramHeaderTableEntry = {
     p_type: integer;
     p_flags: integer;
     p_offset: integer;
@@ -18,7 +18,7 @@ type ProgramHeaderTableEntry = {
     p_align: integer;
 }
 
-type SectionHeaderTableEntry = {
+export type SectionHeaderTableEntry = {
     sh_name: integer;
     sh_type: integer;
     sh_flags: integer;
@@ -54,7 +54,7 @@ export enum EI_INDEX {
     EI_PAD6,
 };
 
-class ELFInfo {
+export class ELFInfo {
     bit: "32" | "64";
     endianness: "little" | "big";
     fileHeader: ELFFileHeader;
@@ -81,7 +81,7 @@ class ELFInfo {
     }
 };
 
-abstract class ELFHeader {
+export abstract class ELFHeader {
     readonly binary: Buffer;
     bit: "32" | "64";
     endianness: "big" | "little";
@@ -147,7 +147,7 @@ abstract class ELFHeader {
     abstract printHex(): void;
 }
 
-class ELFFileHeader extends ELFHeader {
+export class ELFFileHeader extends ELFHeader {
     readonly e_ident_size = 0x10;
     readonly e_type_size = 0x2;
     readonly e_machine_size = 0x2;
@@ -271,7 +271,7 @@ type FieldSizeMapping<T> = {
     size: number;
 }
 
-class ELFProgramHeader extends ELFHeader {
+export class ELFProgramHeader extends ELFHeader {
     phTable: Array<ProgramHeaderTableEntry>;
     phEntries: number;
     phoff: integer;
@@ -362,7 +362,7 @@ class ELFProgramHeader extends ELFHeader {
     }
 };
 
-class ELFSectionHeader extends ELFHeader {
+export class ELFSectionHeader extends ELFHeader {
     shTable: Array<SectionHeaderTableEntry>;
     shEntries: number;
     shoff: integer;
@@ -457,8 +457,3 @@ class ELFSectionHeader extends ELFHeader {
         }
     }
 };
-
-module.exports = {
-    ELFInfo,
-    EI_INDEX
-}
